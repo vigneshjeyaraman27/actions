@@ -1,0 +1,36 @@
+name: 'test'
+runs:
+  using: "composite"
+  steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+
+    # Setup Python (faster than using Python container)
+    - name: Setup Python
+      id: python-version
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.9"
+
+    - name: Install Virtualenv
+      run: |
+        pip install --upgrade virtualenv
+
+    # Configure cached virtualenv folder to reuse between builds
+    - id: cache-virtualenv
+      uses: actions/cache@v3
+      with:
+        path: ~/.local/share/venv
+        key: ${{ runner.os }}-python_linters-venv-${{ steps.python-version.outputs.python-version }}-${{ hashFiles('papi/**/requirements*.txt') }}
+
+    # If cache miss, recreate virtualenv
+    - name: Create virtualenv
+      if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+      run: |
+        virtualenv --python=$(which python) ~/.local/share/venv
+
+    - name: Install dependencies
+      run: |
+        . ~/.local/share/venv/bin/activate
+        pip install -r requirements-dev.txt
+
